@@ -11,6 +11,7 @@ import os
 from scipy.optimize import minimize
 from scipy.linalg import svd
 from time import time
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 class LRE_SVM_Trainer:
     def __init__(self, param):
@@ -25,6 +26,61 @@ class LRE_SVM_Trainer:
             'dam_eps': param.get('dam_eps', 1e-6)
         }
 
+    def evaluate_training_accuracy(self, model, train_ftr, train_lbl):
+        """
+        根据当前模型对训练数据进行预测，并计算训练准确率和混淆矩阵。
+        同时，对于每个类别，打印该类别在训练样本上的 topK 预测分数的均值和标准差。
+        参数：
+          model: 训练得到的模型字典，至少应包含键：
+                 - 'esvm'：字典，其中包含 'esvm_weights' (shape: [num_exemplars, ftr_dim]),
+                              'esvm_bias' (shape: [num_exemplars, 1]) 和 'train_lbl' (1-indexed)。
+          train_ftr: 训练特征矩阵，形状为 (num_samples, ftr_dim)
+          train_lbl: 训练标签（1-indexed），形状为 (num_samples,)
+        返回：
+          acc: 训练准确率（0~1）
+          conf_mat: 混淆矩阵
+        """
+        esvm_weights = model['esvm']['esvm_weights']  # shape: (num_exemplars, ftr_dim)
+        esvm_bias = model['esvm']['esvm_bias']  # shape: (num_exemplars, 1)
+        train_labels_model = model['esvm']['train_lbl']  # shape: (num_samples,), 1-indexed
+
+        # 计算每个 exemplar 对所有训练样本的预测值
+        # 注意：train_ftr.T 的 shape 为 (ftr_dim, num_samples)
+        esvm_predict_val = esvm_weights @ train_ftr.T + esvm_bias
+        # 采用 logistic 函数转换为概率
+        esvm_predict_prob = 1.0 / (1.0 + np.exp(-esvm_predict_val))
+
+        # 如果模型采用 TopK 融合策略
+        prdct_top_num = model.get('prdct_top_num', 5)
+        num_samples = train_ftr.shape[0]
+        cate_num = model['cate_num']
+        predict_val = np.zeros((num_samples, cate_num))
+
+        # 对每个类别，找到对应 exemplar 的索引（假设模型中存储的 train_lbl 即为 exemplar 对应的类别）
+        for cate in range(1, cate_num + 1):
+            cate_idx = np.where(train_labels_model == cate)[0]
+            # 对每个训练样本，将该类别下所有 exemplar 的预测分数排序后取前 K 个求和
+            for i in range(num_samples):
+                scores = esvm_predict_prob[cate_idx, i]
+                sorted_scores = np.sort(scores)[::-1]  # 降序排序
+                topk_sum = np.sum(sorted_scores[:prdct_top_num])
+                predict_val[i, cate - 1] = topk_sum
+
+        # 得到预测标签：取各类别分数最高的类别（记得加回 1 以保证 1-indexed）
+        pred_lbl = np.argmax(predict_val, axis=1) + 1
+        acc = accuracy_score(train_lbl, pred_lbl)
+        conf_mat = confusion_matrix(train_lbl, pred_lbl)
+
+        print("训练准确率: {:.2f}%".format(acc * 100))
+        print("训练混淆矩阵:")
+        print(conf_mat)
+
+        # 对每个类别打印预测分数的均值和标准差
+        for cate in range(1, cate_num + 1):
+            scores_cate = predict_val[:, cate - 1]
+            print(f"类别 {cate}: topK 分数均值 = {np.mean(scores_cate):.4f}, 标准差 = {np.std(scores_cate):.4f}")
+
+        return acc, conf_mat
     def train(self, data):
         train_ftr = data['features']
         train_lbl = data['category_labels'].flatten()
@@ -68,12 +124,14 @@ class LRE_SVM_Trainer:
         self.model['esvm']['esvm_bias'] = bias
         self.model['esvm']['train_lbl'] = train_lbl
         self.model['cate_num'] = cate_num
+        self.evaluate_training_accuracy(self.model, train_ftr, train_lbl)
         return self.model
+
 
     def binary_model_path(self):
         params = self.param
         return (
-            f"{params['model_path']}C{params['svm_C']}W{params['exemplar_weight']}"
+            f"{params['model_path']}/C{params['svm_C']}W{params['exemplar_weight']}"
             f"L{params['lambda1']}-{params['lambda2']}c{params['cate_i']}-{params['cate_j']}.model.pkl"
         )
 class LRE_SVMs_BinaryTrainer:
@@ -201,7 +259,7 @@ class SVTOptimizer:
             if self._check_convergence():
                 break
 
-        print(W, ite)
+        # print(W, ite)
         return W, {
             'obj_val': self.obj_val,
             'iterations': ite,

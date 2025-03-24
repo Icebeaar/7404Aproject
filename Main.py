@@ -1,6 +1,8 @@
 from config import *
 from data_loader import *
 from LRE_SVMs_train import LRE_SVM_Trainer
+from sklearn.metrics import accuracy_score, confusion_matrix
+
 
 if __name__ == '__main__':
     params = config
