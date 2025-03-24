@@ -15,16 +15,17 @@ config = {
     'prdct_top_num': 5,  # Top-K预测数
 
     # 域适应参数
-    'mmd_sigma': 1.0,  # MMD核宽
-    'dam_sigma': 1.0,  # 适应核参数
-    'gamma1': 1.0,  # 权重γ1
-    'gamma2': 1.0,  # 权重γ2
-    'eps': 1e-3,  # 收敛阈值
+    'mmd_sig': 1.0,  # MMD核宽
+    'dam_sig': 1.0,  # 适应核参数
+    'dam_g1': 1.0,  # 权重γ1
+    'dam_g2': 1.0,  # 权重γ2
+    'dam_eps': 1e-3,  # 收敛阈值
     'dam_min_stop': 1e-5,  # 停止条件
 
     # 训练控制
-    'max_epochs': 10,  # 外循环次数
-    'max_inner_steps': 100,  # 内循环步数
-    'min_loss_thred': 1e-7,  # 损失阈值
-    'min_delta': 1e-7  # 变化阈值
+    'max_ite': 10,  # 外循环次数
+    'max_inner_ite': 100,  # 内循环步数
+    'min_f_thred': 1e-7,
+    'min_obj_val': 1e-7,  # 损失阈值
+    # 'dam_min_stop': 1e-5  # 变化阈值
 }

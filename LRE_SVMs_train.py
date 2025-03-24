@@ -1,3 +1,5 @@
+from gc import set_threshold
+
 import numpy as np
 from scipy.optimize import minimize
 import pickle
@@ -117,7 +119,7 @@ class LRE_SVMs_BinaryTrainer:
             aug_weight, _ = SVTOptimizer(init_param).optimize(
                 self.logistic_loss, aug_weight, pos_aug, neg_aug, pos_aug, src_ftr, src_lbl
             )
-            print(aug_weight.shape)
+            # print(aug_weight.shape)
             print(f"Initial optimization took {time()-start:.2f}s")
 
         # Main optimization
@@ -133,20 +135,23 @@ class LRE_SVMs_BinaryTrainer:
         }
 
     def logistic_loss(self, W, pos, neg):
-        pos_scores = np.dot(W, pos.T).diagonal()
-        neg_scores = np.dot(W, neg.T)
 
-        pos_loss = np.log(1 + np.exp(-pos_scores))
-        neg_loss = np.log(1 + np.exp(neg_scores))
+        max_val = np.finfo(np.float64).max / 2  # 防止数值溢出
+        # 正样本损失计算 (广播机制自动处理维度对齐)
+        pos_scores = np.sum(W * pos, axis=1)  # 形状 (n_pos_samples,)
+        pos_loss = np.minimum(np.exp(-pos_scores), max_val)
+
+        neg_scores = np.dot(neg, W.T)  # 形状 (n_neg_samples,)
+        neg_loss = np.minimum(np.exp(neg_scores), max_val)
 
         obj = {
-            'pos': pos_loss,
-            'neg': neg_loss
+            'pos': np.log1p(pos_loss),  # 等价于 log(1 + x)
+            'neg': np.log1p(neg_loss)
         }
 
         grad = {
-            'pos': -pos * (np.exp(-pos_scores) / (1 + np.exp(-pos_scores)))[:, None],
-            'neg': neg.T * (np.exp(neg_scores) / (1 + np.exp(neg_scores)))[None, :]
+            'pos': pos_loss / (1 + pos_loss),
+            'neg': neg_loss / (1 + neg_loss)
         }
         return obj, grad
 
@@ -154,11 +159,11 @@ class LRE_SVMs_BinaryTrainer:
 class SVTOptimizer:
     def __init__(self, param):
         self.param = param
-        self.lambda1 = param.get('lambda1', 0)
-        self.lambda2 = param.get('lambda2', 0)
+        self.lambda1 = param.get('lambda1')
+        self.lambda2 = param.get('lambda2')
         self.C1 = self._calculate_C1(param)
         self.mu = param.get('mu', 1.0)
-        self.max_ite = param.get('max_ite', 100)
+        self.max_ite = param.get('max_ite', 10)
         self.max_inner_ite = param.get('max_inner_ite', 20)
         self.min_obj_val = param.get('min_obj_val', 1e-6)
         self.min_f_thred = param.get('min_f_thred', 1e-5)
@@ -166,6 +171,7 @@ class SVTOptimizer:
 
         # 状态变量
         self.obj_val = np.inf
+        self.obj_val_prev = np.inf
         self.fmat = None
         self.tr_val = 0
         self.cnvg_flag = 0
@@ -179,8 +185,8 @@ class SVTOptimizer:
     def optimize(self, loss_func, W_init, pos_ftr, neg_ftr, trsf_ftr, src_ftr, src_lbl):
         """主优化流程"""
         pos_num, ftr_dim = pos_ftr.shape
-        print(pos_num)
-        print(ftr_dim)
+        # print(pos_num)
+        # print(ftr_dim)
         W = W_init.copy()
         self._init_fmat(W, trsf_ftr)
 
@@ -195,6 +201,7 @@ class SVTOptimizer:
             if self._check_convergence():
                 break
 
+        print(W, ite)
         return W, {
             'obj_val': self.obj_val,
             'iterations': ite,
@@ -230,7 +237,9 @@ class SVTOptimizer:
 
             # 梯度计算
             pos_grad = -self.C1 * (grad_loss['pos'][:, None] * pos_ftr)
-            neg_grad = self.param['svm_C'] * (grad_loss['neg'] @ neg_ftr)
+            # print(neg_ftr.shape)
+            # print(grad_loss['neg'].shape)
+            neg_grad = self.param['svm_C'] * (grad_loss['neg'].T @ neg_ftr)
             reg_grad = 2 * self.mu * W_mat
             fmat_grad = 2 * self.lambda2 * (self._logistic_prob(W_mat @ trsf_ftr.T) - self.fmat) @ trsf_ftr
             total_grad = pos_grad + neg_grad + reg_grad + fmat_grad
@@ -243,6 +252,7 @@ class SVTOptimizer:
 
         if res.fun < self.obj_val - self.min_obj_val:
             W_new = res.x.reshape(W.shape)
+            self.obj_val_prev = self.obj_val
             self.obj_val = res.fun
             return True, W_new
         return False, W
@@ -252,7 +262,10 @@ class SVTOptimizer:
         gmat = self._logistic_prob(W @ trsf_ftr.T)
         try:
             U, S, Vh = svd(gmat, full_matrices=False)
-            s_threshold = np.maximum(S - self.lambda1 / (2 * self.lambda2), 0)
+            if self.lambda2 > 0:
+                s_threshold = np.maximum(S - self.lambda1 / (2 * self.lambda2), 0)
+            else:
+                s_threshold = 0
             self.fmat = (U * s_threshold) @ Vh
             self.tr_val = np.sum(s_threshold)
 
