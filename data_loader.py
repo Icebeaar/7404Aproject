@@ -67,8 +67,8 @@ class DomainDataset(Dataset):
 # class FeatureExtractor(torch.nn.Module):
 #     def __init__(self, model_name):
 #         super().__init__()
-#         model = getattr(models, model_name)
-#         self.features = torch.nn.Sequential(*list(model.children())[:-1])
+#         __model = getattr(models, model_name)
+#         self.features = torch.nn.Sequential(*list(__model.children())[:-1])
 #
 #     def forward(self, x):
 #         x = self.features(x)
@@ -107,7 +107,7 @@ def preprocessing():
     loader = DataLoader(dataset, batch_size=Config.batch_size,
                         shuffle=False, num_workers=4)
 
-    # model = FeatureExtractor(Config.model_name).to(Config.device)
+    # __model = FeatureExtractor(Config.model_name).to(Config.device)
     model = FeatureExtractor().to(Config.device)
     model.eval()
 

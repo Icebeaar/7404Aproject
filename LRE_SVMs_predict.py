@@ -22,7 +22,7 @@ class LRE_SVMs_Predictor:
 
         # 计算准确率等指标
         out_param = self.compute_accuracy(predict_val, test_lbl)
-        out_param['model'] = self.model
+        out_param['__model'] = self.model
         return out_param
 
     def get_predict_val(self, test_ftr):
@@ -36,7 +36,7 @@ class LRE_SVMs_Predictor:
         esvm_predict_prob = self.exemplar_logistic_prob(esvm_predict_val)
 
         # 加权预测概率
-        # esvm_predict_prob *= self.model['exemplar_prior'][:, None]
+        # esvm_predict_prob *= self.__model['exemplar_prior'][:, None]
 
         # 初始化预测值矩阵
         predict_val = np.zeros((smpl_num, cate_num))

@@ -527,7 +527,7 @@ then on unix machines you can do
 <pre>
 cut -d '#' -f 1 < test.txt > test.features
 cut -d '#' -f 2 < test.txt > test.comments
-svm-predict test.feature train.model test.predicts
+svm-predict test.feature train.__model test.predicts
 paste -d '#' test.predicts test.comments | sed 's/#/ #/' > test.results
 </pre>
 -->

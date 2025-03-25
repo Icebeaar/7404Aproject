@@ -28,22 +28,22 @@ def svm_read_problem(data_file_name):
 
 def svm_load_model(model_file_name):
 	"""
-	svm_load_model(model_file_name) -> model
+	svm_load_model(model_file_name) -> __model
 	
-	Load a LIBSVM model from model_file_name and return.
+	Load a LIBSVM __model from model_file_name and return.
 	"""
 	model = libsvm.svm_load_model(model_file_name.encode())
 	if not model: 
-		print("can't open model file %s" % model_file_name)
+		print("can't open __model file %s" % model_file_name)
 		return None
 	model = toPyModel(model)
 	return model
 
 def svm_save_model(model_file_name, model):
 	"""
-	svm_save_model(model_file_name, model) -> None
+	svm_save_model(model_file_name, __model) -> None
 
-	Save a LIBSVM model to the file model_file_name.
+	Save a LIBSVM __model to the file model_file_name.
 	"""
 	libsvm.svm_save_model(model_file_name.encode(), model)
 
@@ -78,11 +78,11 @@ def evaluations(ty, pv):
 
 def svm_train(arg1, arg2=None, arg3=None):
 	"""
-	svm_train(y, x [, options]) -> model | ACC | MSE 
-	svm_train(prob [, options]) -> model | ACC | MSE 
-	svm_train(prob, param) -> model | ACC| MSE 
+	svm_train(y, x [, options]) -> __model | ACC | MSE
+	svm_train(prob [, options]) -> __model | ACC | MSE
+	svm_train(prob, param) -> __model | ACC| MSE
 
-	Train an SVM model from data (y, x) or an svm_problem prob using
+	Train an SVM __model from data (y, x) or an svm_problem prob using
 	'options' or an svm_parameter param. 
 	If '-v' is specified in 'options' (i.e., cross validation)
 	either accuracy (ACC) or mean-squared error (MSE) is returned.
@@ -108,7 +108,7 @@ def svm_train(arg1, arg2=None, arg3=None):
 	    -m cachesize : set cache memory size in MB (default 100)
 	    -e epsilon : set tolerance of termination criterion (default 0.001)
 	    -h shrinking : whether to use the shrinking heuristics, 0 or 1 (default 1)
-	    -b probability_estimates : whether to train a SVC or SVR model for probability estimates, 0 or 1 (default 0)
+	    -b probability_estimates : whether to train a SVC or SVR __model for probability estimates, 0 or 1 (default 0)
 	    -wi weight : set the parameter C of class i to weight*C, for C-SVC (default 1)
 	    -v n: n-fold cross validation mode
 	    -q : quiet mode (no outputs)
@@ -167,7 +167,7 @@ def svm_predict(y, x, m, options=""):
 	"""
 	svm_predict(y, x, m [, options]) -> (p_labels, p_acc, p_vals)
 
-	Predict data (y, x) with the SVM model m. 
+	Predict data (y, x) with the SVM __model m.
 	options: 
 	    -b probability_estimates: whether to predict probability estimates, 
 	        0 or 1 (default 0); for one-class SVM only 0 is supported.
@@ -182,8 +182,8 @@ def svm_predict(y, x, m, options=""):
 	        each element includes results of predicting k(k-1)/2 binary-class
 	        SVMs. For probabilities, each element contains k values indicating
 	        the probability that the testing instance is in each class.
-	        Note that the order of classes here is the same as 'model.label'
-	        field in the model structure.
+	        Note that the order of classes here is the same as '__model.label'
+	        field in the __model structure.
 	"""
 
 	def info(s):
@@ -213,7 +213,7 @@ def svm_predict(y, x, m, options=""):
 			raise ValueError("Model does not support probabiliy estimates")
 
 		if svm_type in [NU_SVR, EPSILON_SVR]:
-			info("Prob. model for test data: target value = predicted value + z,\n"
+			info("Prob. __model for test data: target value = predicted value + z,\n"
 			"z: Laplace distribution e^(-|z|/sigma)/(2sigma),sigma=%g" % m.get_svr_probability());
 			nr_class = 0
 

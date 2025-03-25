@@ -35,7 +35,7 @@ train_pathname = sys.argv[1]
 assert os.path.exists(train_pathname),"training file not found"
 file_name = os.path.split(train_pathname)[1]
 scaled_file = file_name + ".scale"
-model_file = file_name + ".model"
+model_file = file_name + ".__model"
 range_file = file_name + ".range"
 
 if len(sys.argv) > 2:
@@ -66,7 +66,7 @@ cmd = '{0} -c {1} -g {2} "{3}" "{4}"'.format(svmtrain_exe,c,g,scaled_file,model_
 print('Training...')
 Popen(cmd, shell = True, stdout = PIPE).communicate()
 
-print('Output model: {0}'.format(model_file))
+print('Output __model: {0}'.format(model_file))
 if len(sys.argv) > 2:
 	cmd = '{0} -r "{1}" "{2}" > "{3}"'.format(svmscale_exe, range_file, test_pathname, scaled_test_file)
 	print('Scaling testing data...')

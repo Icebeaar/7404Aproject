@@ -31,7 +31,7 @@ class LRE_SVM_Trainer:
         根据当前模型对训练数据进行预测，并计算训练准确率和混淆矩阵。
         同时，对于每个类别，打印该类别在训练样本上的 topK 预测分数的均值和标准差。
         参数：
-          model: 训练得到的模型字典，至少应包含键：
+          __model: 训练得到的模型字典，至少应包含键：
                  - 'esvm'：字典，其中包含 'esvm_weights' (shape: [num_exemplars, ftr_dim]),
                               'esvm_bias' (shape: [num_exemplars, 1]) 和 'train_lbl' (1-indexed)。
           train_ftr: 训练特征矩阵，形状为 (num_samples, ftr_dim)
@@ -105,7 +105,7 @@ class LRE_SVM_Trainer:
                 if os.path.exists(tmp_file):
                     with open(tmp_file, 'rb') as f:
                         tmp_model = pickle.load(f)
-                    print(f"Loaded model from {tmp_file}")
+                    print(f"Loaded __model from {tmp_file}")
                 else:
                     tmp_model = LRE_SVMs_BinaryTrainer(self.param).train(train_ftr, tmp_trn_lbl, tmp_file)
                     with open(tmp_file, 'wb') as f:
@@ -132,7 +132,7 @@ class LRE_SVM_Trainer:
         params = self.param
         return (
             f"{params['model_path']}/C{params['svm_C']}W{params['exemplar_weight']}"
-            f"L{params['lambda1']}-{params['lambda2']}c{params['cate_i']}-{params['cate_j']}.model.pkl"
+            f"L{params['lambda1']}-{params['lambda2']}c{params['cate_i']}-{params['cate_j']}.__model.pkl"
         )
 class LRE_SVMs_BinaryTrainer:
     def __init__(self, param):
@@ -143,7 +143,7 @@ class LRE_SVMs_BinaryTrainer:
         params = self.param
         return (
             f"{params['model_path']}C{params['svm_C']}W{params['exemplar_weight']}"
-            f"L{params['lambda1']}-{params['lambda2']}c{params['cate_i']}-{params['cate_j']}.model.pkl"
+            f"L{params['lambda1']}-{params['lambda2']}c{params['cate_i']}-{params['cate_j']}.__model.pkl"
         )
 
     def train(self, src_ftr, src_lbl, tmp_file):
