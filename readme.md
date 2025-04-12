@@ -6,7 +6,7 @@ The code is implemented by Python.
 
 To run the code, you should install the requirements by `pip install -r requirements.txt`
 
-If you want to run the project, you can open and run the 'Main.py' for office_caltech_10 dataset, or 'Main_ixams.py' for ixams dataset. And also you can check 'LRESSVMs_Fast_matData.py' for faster algorithm using SSVMs.
+If you want to run the project, you can open and run the 'Main.py' for office_caltech_10 dataset, or 'Main_ixams.py' for ixams dataset. And also you can check 'LRESSVMs_Fast_matData.py' for faster algorithm using LSSVMs.
 
 The models for the 'Main.py' are saved in 'model' directory.
 
