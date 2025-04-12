@@ -2,11 +2,13 @@
 
 This repo is the code for reproducing the paper：Domain Generalization and Adaptation Using Low Rank Exemplar SVMs’ in ARIN7404A, 2025, HKU.
 
-The code is implemented by Python, and the models are saved in 'model' directory.
+The code is implemented by Python. 
 
 To run the code, you should install the requirements by `pip install -r requirements.txt`
 
-If you want to run the project, you can open and run the 'Main.py' for office_caltech_10 dataset, or 'Main_ixams.py' for ixams dataset.
+If you want to run the project, you can open and run the 'Main.py' for office_caltech_10 dataset, or 'Main_ixams.py' for ixams dataset. And also you can check 'LRESSVMs_Fast_matData.py' for faster algorithm using SSVMs.
+
+The models for the 'Main.py' are saved in 'model' directory.
 
 The baseline model we use in our project is SVM, and you can run the code in 'baseline.py' or 'baseline_ixams.py'.
 
