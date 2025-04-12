@@ -11,15 +11,13 @@ from data_loader import *
 
 class LRELSSVM:
     def __init__(self, C1=10, C2=1, lambda1=10, lambda2=10, K=5):
-        # 论文中的超参数
-        self.C1 = C1  # 正样本正则化参数
-        self.C2 = C2  # 负样本正则化参数
-        self.lambda1 = lambda1  # 低秩正则参数
-        self.lambda2 = lambda2  # 预测矩阵匹配参数
-        self.K = K  # 选择top K exemplar个数
+        self.C1 = C1 
+        self.C2 = C2 
+        self.lambda1 = lambda1  
+        self.lambda2 = lambda2  
+        self.K = K  
         self.W = []  # 权重矩阵c个，期望形状：[d x n]（d为特征数，n为正样本总数）
         self.F = None  # 辅助低秩矩阵，形状：[n x n]
-        # 此处 M_inv 用于单个 exemplar 问题求解中的加速（可选）
         self.M_inv = None
 
 
@@ -34,15 +32,9 @@ class LRELSSVM:
         return U @ torch.diag(S_thresh) @ Vt
 
     def _solve_exemplar_lssvm(self, x_pos, X_pos, X_neg, f_col, m_neg, M_inv):
-        """快速求解单个exemplar LSSVM问题（公式12）。
-        X_pos 和 X_neg 要保证形状为 [d x n_pos] 和 [d x n_neg]。
-        f_col：辅助向量，形状 [n_pos]。
-        """
-        # print('X_pos: ', X_pos.shape)
-        # print('X_neg:', X_neg.shape)
-        # 如果输入的X_pos或X_neg形状不对（样本数在第一维），则转置
-        d = 4096  # 假设特征维数为4096，可根据实际情况修改
-        # d = 4  # 假设特征维数为4096，可根据实际情况修改
+        """快速求解单个exemplar LSSVM问题（公式12）"""
+        d = 4096 
+        # d = 4  
         if X_pos.shape[0] != d:
             X_pos = X_pos.T  # 变为 [d x n_pos]
         if x_pos.shape[0] != d:
@@ -50,9 +42,8 @@ class LRELSSVM:
         if X_neg.shape[0] != d:
             X_neg = X_neg.T  # 变为 [d x n_neg]
 
-        # 构造扩展矩阵 X_ext = [X_pos, X_neg, X_pos]，形状为 [d x (n_pos+m_neg+n_pos)]
+       
         X_ext = torch.hstack([x_pos, X_neg, X_pos]).to(Config.device)
-        # 构造对角正则矩阵 D：第一部分对应正样本，第二部分对应负样本，第三部分对应f_col匹配
         # 计算 M = X_ext^T X_ext + D
         m1 = (X_ext.T @ x_pos).to(Config.device)
         m11 = m1[0][0] + 1 / self.C1
@@ -62,23 +53,18 @@ class LRELSSVM:
                                 torch.vstack([-miu*(M_inv @ m1).T,
                                               M_inv+miu* M_inv @ m1 @ m1.T @ M_inv])])
         # 构造右侧向量 y = [1, -1 (m_neg times), f_col]
-        # print('f_col: ', f_col.shape)
         y_vec = torch.cat([torch.tensor([1]).to(Config.device),
                            torch.full((m_neg,), -1).to(Config.device),
                            f_col])
         # 求解 alpha = M_inv @ y_vec
         alpha = M_t_inv @ y_vec
-        # 计算权重向量：w = X_ext @ alpha, 形状 [d]
         w = X_ext @ alpha
         return w
 
     def fit(self, X_train, y_train, max_iter=10):
         """
         训练 LRE-LSSVM 模型。
-        X_train: 形状 [n_samples, d]，每行为一个样本。
-        y_train: 形状 [n_samples,]，类别标签（0-indexed）；内部将转换为1-indexed。
         """
-        # 确保数据形状：样本在行，特征在列
         n_samples, d = X_train.shape
         lb = LabelBinarizer()
         Y_bin = lb.fit_transform(y_train)  # [n_samples x n_classes]
@@ -87,24 +73,19 @@ class LRELSSVM:
         print("  特征形状:", X_train.shape)
         unique, counts = np.unique(y_train, return_counts=True)
         print("  类别标签分布:", (unique, counts))
-        # 分离正样本数据列表：对于每个类别，取出对应样本的转置（使形状为 [d, n_c]）
+
         X_pos_list = [torch.tensor(X_train[y_train == c].T) for c in range(cate_num)]
-        ####################### wait for modify #######################
-        # 负样本：这里假设类别0为负样本，如果不是，请根据实际情况修改
         X_neg_list = [torch.tensor(X_train[y_train != c].T) for c in range(cate_num)]
-        ####################### wait for modify #######################
         # 统计各类别正样本数
         pos_counts = [x.shape[1] for x in X_pos_list]
         print("各类别正样本数量:", pos_counts)
 
-        # 初始化权重矩阵 W：把所有正样本的模型拼接在一起，W 的形状为 [d x n_total]
         n_total = sum(pos_counts)
         self.W = [None for _ in range(cate_num)]
         threshold_F, threshold_W = 1e-3, 1e-4
         for c in range(cate_num):
             X_pos = X_pos_list[c].to(Config.device)
             X_neg = X_neg_list[c].to(Config.device)
-            # 交替优化：先更新F，再对每个exemplar更新W
             n_c = X_pos.shape[1]
             W = torch.randn(d, n_c).to(Config.device) * 0.01
             n_pos = X_pos.shape[1]
@@ -123,20 +104,15 @@ class LRELSSVM:
                 W_cols = []
                 for j in range(n_c):
                     print(end=f'\rcalculate exemplar: {j+1}/{n_c}, for category: {c}, iter: {it+1}/{max_iter}')
-                    # 对于每个 exemplar，其辅助向量 f_col 为 F 的对应列
                     f_col = F[:, j]
-                    # 取当前 exemplar 的正样本向量（形状 [d, 1]）
                     x_pos = X_pos[:, j:j + 1]
-                    # 负样本保持不变（这里负样本数据 X_neg 形状应为 [d, m_neg]）
                     w_exemplar = self._solve_exemplar_lssvm(x_pos, X_pos, X_neg, f_col, m_neg, M_inv)
                     W_cols.append(w_exemplar.reshape(-1, 1))
                 print()
                 W = torch.hstack(W_cols)
                 G = W.T @ X_pos
                 F = self._update_F(G)
-
-
-                # 还需加入收敛判定阈值
+                
                 W_change = torch.mean(torch.abs(W - pre_W))
                 F_change = torch.mean(torch.abs(F - pre_F))
 
@@ -166,18 +142,15 @@ class LRELSSVM:
 
 
 def evaluate_model(model, train_data, test_data, max_iter=10):
-    # 训练模型
     start_time = time.time()
     model.fit(train_data['features'], train_data['category_labels'], max_iter=max_iter)
     print(f"Training time: {time.time() - start_time:.2f}s")
 
-    # 预测测试集
     test_preds = model.predict(test_data['features'])
     test_labels = test_data['category_labels']
 
     pred_label = [np.argmax(i) for i in test_preds]
 
-    # 计算准确率
     acc = accuracy_score(test_labels, pred_label)
     print(f"Test Accuracy: {acc * 100:.2f}%")
     return acc
@@ -197,14 +170,9 @@ def l2_normalize_features(features):
     norms = np.linalg.norm(features, axis=1, keepdims=True)
     return features / (norms + 1e-8)
 
-# 示例：数据加载、分域、训练和评估（此处仅为示例，请根据你实际的数据加载函数调整）
 if __name__ == "__main__":
     mat_file_path = 'data/office_caltech_dl_ms0.mat'
-
-    # 加载MAT数据
     data_dict = load_mat_data(mat_file_path)
-
-    # 转换为目标字典结构
     py_data = convert_mat_to_py_dict(data_dict)
 
     # 打印转换后字典的关键信息
@@ -220,16 +188,13 @@ if __name__ == "__main__":
     features_norm = l2_normalize_features(py_data['features'])
     py_data['features'] = features_norm
 
-    # 选择源域数据（例如领域 0 和 1 作为训练集）
     train_selected = select_domain_data(py_data, [0, 1])
-    # 选择目标域数据（例如领域 2 和 3 作为测试集）
     test_selected = select_domain_data(py_data, [2, 3])
     train_data = {
         'features': train_selected['features'],
         'category_labels': train_selected['category_labels']  # 转换为 1-indexed
     }
 
-    # 构造测试数据字典，测试时也需要保证标签一致性（如果训练时为1-indexed）
     test_data = {
         'features': test_selected['features'],
         'category_labels': test_selected['category_labels']
@@ -239,10 +204,6 @@ if __name__ == "__main__":
     print("训练数据统计:")
     print("  特征形状:", train_data['features'].shape)
     print("  类别标签分布:", np.unique(train_data['category_labels'], return_counts=True))
-    # 假设有函数 preprocessing() 返回字典，包含 'features' 和 'category_labels'
-    # 训练数据和目标数据按域分开（这里直接使用全部数据作为训练）
-    # train_data = data
-    # test_data = target_data
 
     model_instance = LRELSSVM(C1=10, C2=1, lambda1=10, lambda2=10, K=5)
     evaluate_model(model_instance, train_data, test_data, max_iter=100)
