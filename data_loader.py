@@ -15,27 +15,23 @@ import scipy.io as sio
 
 # 配置参数
 class Config:
-    img_dir = "./office_caltech_10/"  # 图片目录路径
-    # save_path = "./office_caltech_dl_ms0.mat"  # 保存路径
-    batch_size = 32  # 根据GPU显存调整
+    img_dir = "./office_caltech_10/" 
+    # save_path = "./office_caltech_dl_ms0.mat"  
+    batch_size = 32 
     input_size = 227
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model_name = "alexNet"  # 可选resnet50/resnet101
+    model_name = "alexNet" 
 
-    # 预定义领域和类别映射
     DOMAINS = ['amazon', 'caltech', 'dslr', 'webcam']
     CATEGORIES = ['back_pack', 'bike', 'calculator', 'headphones',
                   'keyboard', 'laptop_computer', 'monitor', 'mouse', 'mug', 'projector']
 
-
-# 自定义数据集类（支持语义化标签）
 class DomainDataset(Dataset):
     def __init__(self, img_dir, transform):
         self.img_paths = []
         self.domain_labels = []
         self.category_labels = []
 
-        # 验证目录结构
         for domain in os.listdir(img_dir):
             if domain.lower() not in Config.DOMAINS:
                 raise ValueError(f"检测到非法领域目录: {domain}，合法领域应为{Config.DOMAINS}")
@@ -62,17 +58,6 @@ class DomainDataset(Dataset):
         img = Image.open(self.img_paths[idx]).convert('RGB')
         return self.transform(img), self.category_labels[idx], self.domain_labels[idx]
 
-
-# 特征提取模型（保持不变）
-# class FeatureExtractor(torch.nn.Module):
-#     def __init__(self, model_name):
-#         super().__init__()
-#         __model = getattr(models, model_name)
-#         self.features = torch.nn.Sequential(*list(__model.children())[:-1])
-#
-#     def forward(self, x):
-#         x = self.features(x)
-#         return x.flatten(1)
 class FeatureExtractor(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -111,7 +96,6 @@ def preprocessing():
     model = FeatureExtractor().to(Config.device)
     model.eval()
 
-    # 预分配存储空间
     features = torch.zeros(len(dataset), 4096)
     domain_labels = np.zeros(len(dataset), dtype=np.int16)
     category_labels = np.zeros(len(dataset), dtype=np.int16)
@@ -140,100 +124,6 @@ def preprocessing():
         '_raw_categories': np.array(Config.CATEGORIES)[category_labels]
     }
     return output_dict
-
-# def _load_pixels(img_path):
-#     """加载单张图像为像素矩阵"""
-#
-#     img = Image.open(img_path)
-#     # 统一颜色模式
-#     img = img.convert('L')
-#     # 调整尺寸
-#     img = img.resize((224,224))
-#     # 转换为numpy数组
-#     pixel_array = np.array(img, dtype=np.float32)
-#     # 归一化处理
-#     pixel_array /= 255.0
-#     return pixel_array
-#
-# def load_images(data_root, img_size=(224, 224)):
-#     """加载原始图片路径并预处理"""
-#     domains = ['amazon', 'caltech', 'dslr', 'webcam']
-#     categories = ['back_pack', 'bike', 'calculator', 'headphones',
-#                   'keyboard', 'laptop_computer', 'monitor', 'mouse', 'mug', 'projector']
-#
-#     dataset = {
-#         'domains': domains,
-#         'categories': categories,
-#         'images': [[] for _ in domains],  # 各领域的图片列表
-#         'labels': [[] for _ in domains],  # 对应的类别标签
-#         'metadata': []  # 存储(领域, 类别, 文件名)
-#     }
-#
-#     # 遍历所有领域和类别
-#     for dm_idx, domain in enumerate(domains):
-#         domain_path = os.path.join(data_root, domain)
-#         if not os.path.exists(domain_path):
-#             raise FileNotFoundError(f"图片目录不存在: {domain_path}")
-#
-#         for cate_idx, category in enumerate(categories):
-#             cate_path = os.path.join(domain_path, category)
-#             if not os.path.isdir(cate_path):
-#                 print(f"Warning: 缺失类别目录 {cate_path}")
-#                 continue
-#
-#             # 收集所有图像文件路径
-#             img_files = [f for f in os.listdir(cate_path)
-#                          if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
-#
-#             for img_file in img_files:
-#                 abs_path = os.path.join(cate_path, img_file)
-#                 dataset['images'][dm_idx].append(_load_pixels(abs_path))
-#                 dataset['labels'][dm_idx].append(cate_idx)
-#                 dataset['metadata'].append((domain, category, img_file))
-#
-#     # 统计信息
-#     dataset['total_images'] = sum(len(_) for _ in dataset['images'])
-#     print(f"成功加载 {dataset['total_images']} 张图片")
-#     return dataset
-#
-#
-# def image_loader(path):
-#     """图像加载与预处理管道"""
-#     try:
-#         img = Image.open(path).convert('L')
-#         return img
-#     except Exception as e:
-#         print(f"加载失败: {path} - {str(e)}")
-#         return None
-#
-#
-# def domain_split(dataset, src_domains=['amazon', 'caltech'],tgt_domains=['dslr', 'webcam']):
-#     """划分源域和目标域"""
-#     src_ids = [dataset['domains'].index(d) for d in src_domains]
-#     tgt_ids = [dataset['domains'].index(d) for d in tgt_domains]
-#
-#     def merge_data(ids, label):
-#         merged_images = np.concatenate([dataset['features'][i] for i in ids], axis=0)
-#
-#         merged_labels = np.concatenate([np.full(len(dataset['images'][i]), 1 if i in src_ids else -1)
-#                 for i in ids
-#             ])
-#
-#         return {
-#             'images': merged_images.astype(np.float32),
-#             'labels': merged_labels.astype(np.int32)
-#         }
-#         images = []
-#         labels = []
-#         for i in ids:
-#             images.extend(dataset['images'][i])
-#             labels.extend(label)
-#         return {'images': images, 'labels': labels}
-#
-#     return {
-#         'source': merge_data(src_ids, 1),
-#         'target': merge_data(tgt_ids, -1)
-#     }
 
 
 import numpy as np
