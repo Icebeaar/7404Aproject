@@ -1,10 +1,12 @@
-This project aims to reproduce the paper：Domain Generalization and Adaptation Using Low Rank Exemplar SVMs’.
+This repo is the code for reproducing the paper：Domain Generalization and Adaptation Using Low Rank Exemplar SVMs’ in ARIN7404A, 2025, HKU.
 
-The code is mainly developed using MATLAB
+The code is implemented by Python, and the models are saved in 'model' directory.
 
-In the project we have trained and tested domain generalization on the Office-Caltech dataset based on the Algorithms1 from the paper.
-We choose A, C as the source domain and D, W as the target domain.
+To run the code, you should install the requirements by `pip install -r requirements.txt`
 
-You can run the whole project by run demo.m . We saved the trained model in the model folder, so you can quickly observe the test results.
+If you want to run the project, you can open and run the 'Main.py' for office_caltech_10 dataset, or 'Main_ixams.py' for ixams dataset.
 
-If you need to train model by yourself, please delete the model folder and re-run the demo.m, of course the training may take a few hours.
+The baseline model we use in our project is SVM, and you can run the code in 'baseline.py' or 'baseline_ixams.py'.
+
+If you want to train the models by yourselves, you can simply set the 'save_model_flag' to 1 (for Main.py).
+
