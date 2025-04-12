@@ -6,14 +6,11 @@ import time
 import numpy as np
 
 if __name__ == '__main__':
-    # 1. 数据准备
     params = config  # 使用IXMAS配置
     
-    # 加载所有数据
     full_loader, full_stats = load_ixmas_data()
     print("完整数据集统计:", full_stats)
     
-    # 获取numpy数组格式数据
     all_features = []
     all_categories = []
     all_domains = []
@@ -41,9 +38,9 @@ if __name__ == '__main__':
     # 3. 训练标准SVM模型
     print("训练标准SVM模型...")
     svm_model = SVC(
-        kernel='linear',  # 使用线性核
-        C=1.0,            # 正则化参数
-        decision_function_shape='ovr'  # 一对多策略
+        kernel='linear',  
+        C=1.0,            
+        decision_function_shape='ovr' 
     )
     
     start = time.time()
