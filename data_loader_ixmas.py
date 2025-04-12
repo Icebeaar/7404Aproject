@@ -6,13 +6,12 @@ from torch.utils.data import Dataset, DataLoader
 
 class IXMASConfig:
     # 配置参数
-    feature_root = "/home/r22user1/linziyue/7404Aproject/ixmas/ixmas_reorganized"  # 特征文件根目录
-    domains = ['cam0', 'cam1', 'cam2', 'cam3', 'cam4']  # 摄像头视角
+    feature_root = "/home/r22user1/linziyue/7404Aproject/ixmas/ixmas_reorganized"  
+    domains = ['cam0', 'cam1', 'cam2', 'cam3', 'cam4'] 
     categories = [  # 动作类别列表
         'check-watch', 'cross-arms',  
         'sit-down', 'get-up', 'scratch-head']
-      # 请根据您的实际动作类别修改
-    feature_dim = 5000  # 根据您的特征维度修改
+    feature_dim = 5000 
 
 class IXMASDataset(Dataset):
     def __init__(self, feature_root, domains=None, categories=None):
@@ -48,8 +47,7 @@ class IXMASDataset(Dataset):
                 action_path = os.path.join(cam_path, action)
                 if not os.path.isdir(action_path):
                     continue
-                    
-                # 加载所有_bow.npy文件
+
                 for file in os.listdir(action_path):
                     if file.endswith('_bow.npy'):
                         file_path = os.path.join(action_path, file)
@@ -65,9 +63,7 @@ class IXMASDataset(Dataset):
         return len(self.feature_paths)
     
     def __getitem__(self, idx):
-        # 加载npy文件
         feature = np.load(self.feature_paths[idx])
-        # 转换为tensor并确保是float32类型
         feature = torch.from_numpy(feature).float()
         # 返回特征、动作类别、摄像头视角
         return feature, self.category_labels[idx], self.domain_labels[idx]
@@ -103,14 +99,6 @@ def load_ixmas_data(domains=None, categories=None, batch_size=32):
     return loader, stats
 
 def select_domain_data(features, domain_labels, category_labels, domain_ids):
-    """
-    选择特定domain的数据
-    :param features: 所有特征数据 (numpy array)
-    :param domain_labels: 所有domain标签 (numpy array)
-    :param category_labels: 所有category标签 (numpy array)
-    :param domain_ids: 要选择的domain ID列表
-    :return: 筛选后的特征、category标签和统计信息
-    """
     # 生成域选择掩码
     domain_mask = np.isin(domain_labels, domain_ids)
     
@@ -137,20 +125,15 @@ def select_domain_data(features, domain_labels, category_labels, domain_ids):
 
 # 使用示例
 if __name__ == "__main__":
-    # 示例1: 加载所有数据
     loader, stats = load_ixmas_data()
     print("加载所有数据统计:", stats)
     
-    # 示例2: 只加载cam0和cam1的数据
     loader, stats = load_ixmas_data(domains=['cam0', 'cam1'])
     print("\n加载cam0和cam1数据统计:", stats)
     
-    # 示例3: 只加载特定动作的数据
     loader, stats = load_ixmas_data(categories=['check-watch', 'walk'])
     print("\n加载特定动作数据统计:", stats)
     
-    # 示例4: 从已加载数据中选择特定domain
-    # 假设我们已经有了所有特征数据
     all_features = np.concatenate([batch[0].numpy() for batch in loader])
     all_domains = np.concatenate([batch[2].numpy() for batch in loader])
     all_categories = np.concatenate([batch[1].numpy() for batch in loader])
