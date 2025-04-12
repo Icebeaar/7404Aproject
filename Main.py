@@ -34,14 +34,12 @@ if __name__ == '__main__':
     #
     # X_test = tgt_data['features']
     # y_test = tgt_data['category_labels']
-    train_domains = [0, 1]  # 用于训练的领域
-    test_domains = [2, 3]  # 用于测试的领域
+    train_domains = [0, 1] 
+    test_domains = [2, 3] 
 
-    # 根据领域索引分割数据
     train_idx = np.isin(data['domain_labels'], train_domains)
     test_idx = np.isin(data['domain_labels'], test_domains)
 
-    # 构建训练集和测试集，保留原始格式
     src_data = {
         'features': data['features'][train_idx],
         'category_labels': data['category_labels'][train_idx],
@@ -54,16 +52,10 @@ if __name__ == '__main__':
         'domain_labels': data['domain_labels'][test_idx]
     }
 
-    # 数据标准化（对特征进行归一化）
-    logging.info("对特征进行标准化...")
-    scaler = StandardScaler()
-    # src_data['features'] = scaler.fit_transform(src_data['features'])
-    # tgt_data['features'] = scaler.fit_transform(tgt_data['features'])
-
-    # # 数据标准化（对特征进行归一化）
+    # logging.info("对特征进行标准化...")
     # scaler = StandardScaler()
-    # src_data['features'] = scaler.fit_transform(src_data['features'])
-    # tgt_data['features'] = scaler.transform(tgt_data['features'])
+    # # src_data['features'] = scaler.fit_transform(src_data['features'])
+    # # tgt_data['features'] = scaler.fit_transform(tgt_data['features'])
 
 
     model = LRE_SVM_Trainer(params)
@@ -80,7 +72,5 @@ if __name__ == '__main__':
     logging.info(f'测试准确率：{acc:.2f}')
     logging.info(f'混淆矩阵：')
     logging.info(conf_mat)
-    # logging.info(model_dict)
-    # print(data)
 
 
