@@ -45,29 +45,22 @@ class LRE_SVM_Trainer:
         esvm_bias = model['esvm']['esvm_bias']  # shape: (num_exemplars, 1)
         train_labels_model = model['esvm']['train_lbl']  # shape: (num_samples,), 1-indexed
 
-        # 计算每个 exemplar 对所有训练样本的预测值
-        # 注意：train_ftr.T 的 shape 为 (ftr_dim, num_samples)
         esvm_predict_val = esvm_weights @ train_ftr.T + esvm_bias
-        # 采用 logistic 函数转换为概率
         esvm_predict_prob = 1.0 / (1.0 + np.exp(-esvm_predict_val))
 
-        # 如果模型采用 TopK 融合策略
         prdct_top_num = model.get('prdct_top_num', 5)
         num_samples = train_ftr.shape[0]
         cate_num = model['cate_num']
         predict_val = np.zeros((num_samples, cate_num))
 
-        # 对每个类别，找到对应 exemplar 的索引（假设模型中存储的 train_lbl 即为 exemplar 对应的类别）
         for cate in range(1, cate_num + 1):
             cate_idx = np.where(train_labels_model == cate)[0]
-            # 对每个训练样本，将该类别下所有 exemplar 的预测分数排序后取前 K 个求和
             for i in range(num_samples):
                 scores = esvm_predict_prob[cate_idx, i]
                 sorted_scores = np.sort(scores)[::-1]  # 降序排序
                 topk_sum = np.sum(sorted_scores[:prdct_top_num])
                 predict_val[i, cate - 1] = topk_sum
 
-        # 得到预测标签：取各类别分数最高的类别（记得加回 1 以保证 1-indexed）
         pred_lbl = np.argmax(predict_val, axis=1) + 1
         acc = accuracy_score(train_lbl, pred_lbl)
         conf_mat = confusion_matrix(train_lbl, pred_lbl)
@@ -76,7 +69,6 @@ class LRE_SVM_Trainer:
         print("训练混淆矩阵:")
         print(conf_mat)
 
-        # 对每个类别打印预测分数的均值和标准差
         for cate in range(1, cate_num + 1):
             scores_cate = predict_val[:, cate - 1]
             print(f"类别 {cate}: topK 分数均值 = {np.mean(scores_cate):.4f}, 标准差 = {np.std(scores_cate):.4f}")
@@ -196,16 +188,15 @@ class LRE_SVMs_BinaryTrainer:
 
     def logistic_loss(self, W, pos, neg):
 
-        max_val = np.finfo(np.float64).max / 2  # 防止数值溢出
-        # 正样本损失计算 (广播机制自动处理维度对齐)
-        pos_scores = np.sum(W * pos, axis=1)  # 形状 (n_pos_samples,)
+        max_val = np.finfo(np.float64).max / 2 
+        pos_scores = np.sum(W * pos, axis=1) 
         pos_loss = np.minimum(np.exp(-pos_scores), max_val)
 
-        neg_scores = np.dot(neg, W.T)  # 形状 (n_neg_samples,)
+        neg_scores = np.dot(neg, W.T)  
         neg_loss = np.minimum(np.exp(neg_scores), max_val)
 
         obj = {
-            'pos': np.log1p(pos_loss),  # 等价于 log(1 + x)
+            'pos': np.log1p(pos_loss), 
             'neg': np.log1p(neg_loss)
         }
 
@@ -229,7 +220,6 @@ class SVTOptimizer:
         self.min_f_thred = param.get('min_f_thred', 1e-5)
         self.verbose = param.get('verbose', True)
 
-        # 状态变量
         self.obj_val = np.inf
         self.obj_val_prev = np.inf
         self.fmat = None
@@ -344,6 +334,5 @@ class SVTOptimizer:
         return delta < threshold
 
     def _logistic_prob(self, scores):
-        """数值稳定的logistic函数"""
         scores = np.clip(scores, -500, 500)
         return 1 / (1 + np.exp(-scores))
